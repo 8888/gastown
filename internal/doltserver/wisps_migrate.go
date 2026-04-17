@@ -380,7 +380,6 @@ var wispsCreateDDL = `CREATE TABLE wisps (
   ephemeral tinyint(1) DEFAULT 1,
   pinned tinyint(1) DEFAULT 0,
   is_template tinyint(1) DEFAULT 0,
-  crystallizes tinyint(1) DEFAULT 0,
   mol_type varchar(32) DEFAULT '',
   work_type varchar(32) DEFAULT 'mutex',
   quality_score double,

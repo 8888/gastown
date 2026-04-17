@@ -2290,9 +2290,12 @@ func InitRig(townRoot, rigName string) (serverWasRunning bool, created bool, err
 	}
 
 	if running {
-		// Server is running: use CREATE DATABASE which both creates the
-		// directory and registers the database with the live server.
-		if err := serverExecSQL(townRoot, fmt.Sprintf("CREATE DATABASE `%s`", rigName)); err != nil {
+		// Server is running: use CREATE DATABASE IF NOT EXISTS which both
+		// creates the directory and registers the database with the live
+		// server. IF NOT EXISTS prevents failures when the database was
+		// already created (e.g., by a prior test run sharing the same
+		// Dolt container).
+		if err := serverExecSQL(townRoot, fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s`", rigName)); err != nil {
 			return true, false, fmt.Errorf("creating database on running server: %w", err)
 		}
 		// Wait for the new database to appear in the server's in-memory catalog.
