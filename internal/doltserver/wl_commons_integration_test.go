@@ -33,6 +33,13 @@ func startIsolatedDoltContainer(t *testing.T) string {
 func TestRealWLCommonsStore_Conformance(t *testing.T) {
 	townRoot := startIsolatedDoltContainer(t)
 
+	// Drop the wl_commons database on cleanup to prevent "database exists"
+	// errors when the container is shared across test runs (same pattern as
+	// scheduler tests — see setupMultiRigSchedulerTown).
+	t.Cleanup(func() {
+		_ = serverExecSQL(townRoot, fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", WLCommonsDB))
+	})
+
 	// Pre-create the database before parallel subtests to avoid
 	// concurrent CREATE DATABASE races.
 	store := NewWLCommons(townRoot)
