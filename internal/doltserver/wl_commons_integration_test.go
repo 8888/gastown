@@ -3,11 +3,13 @@
 package doltserver
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"os/exec"
 	"testing"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/steveyegge/gastown/internal/testutil"
 )
 
@@ -26,6 +28,26 @@ func startIsolatedDoltContainer(t *testing.T) string {
 	if err := os.MkdirAll(DefaultConfig(townRoot).DataDir, 0755); err != nil {
 		t.Fatalf("creating data dir: %v", err)
 	}
+
+	// Drop the wl_commons database on cleanup to prevent "database exists"
+	// errors when tests share a Dolt server (same pattern as scheduler tests).
+	t.Cleanup(func() {
+		port := os.Getenv("GT_DOLT_PORT")
+		if port == "" {
+			port = "3307"
+		}
+		dsn := fmt.Sprintf("root@tcp(127.0.0.1:%s)/", port)
+		db, err := sql.Open("mysql", dsn)
+		if err != nil {
+			t.Logf("cleanup: could not connect to drop %s: %v", WLCommonsDB, err)
+			return
+		}
+		defer db.Close()
+		if _, err := db.Exec("DROP DATABASE IF EXISTS `" + WLCommonsDB + "`"); err != nil {
+			t.Logf("cleanup: failed to drop %s: %v", WLCommonsDB, err)
+		}
+	})
+
 	return townRoot
 }
 
