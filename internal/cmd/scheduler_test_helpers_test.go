@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/steveyegge/gastown/internal/config"
@@ -223,25 +222,13 @@ func addBeadDependency(t *testing.T, blocked, blocker, dir string) {
 // addBeadDependencyOfType adds a dependency with a specific type (e.g., "tracks",
 // "depends_on"). The from bead must exist in the local DB at dir; the to bead can
 // be in a different DB if routes.jsonl is present in dir's .beads/.
-//
-// bd v1.0.0 no longer resolves cross-rig IDs via routes for dep add. If the CLI
-// fails with "no issue found", falls back to inserting the dependency directly
-// via the beads Go SDK (which bypasses target-existence validation).
 func addBeadDependencyOfType(t *testing.T, from, to, depType, dir string) {
 	t.Helper()
 	cmd := exec.Command("bd", "dep", "add", from, to, "--type="+depType)
 	cmd.Dir = dir
-	out, err := cmd.CombinedOutput()
-	if err == nil {
-		return
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("bd dep add %s %s --type=%s failed: %v\n%s", from, to, depType, err, out)
 	}
-	// bd v1.0.0 can't resolve cross-rig IDs — fall back to the beads Go SDK
-	// which writes directly to the embedded store without validating the target.
-	if strings.Contains(string(out), "no issue found") {
-		ensureCrossRigDep(t, from, to, depType, dir)
-		return
-	}
-	t.Fatalf("bd dep add %s %s --type=%s failed: %v\n%s", from, to, depType, err, out)
 }
 
 // createTestBeadOfType creates a bead with the given title and issue type (e.g.,
