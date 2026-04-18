@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -15,7 +14,6 @@ import (
 	"strings"
 	"testing"
 
-	beadsdk "github.com/steveyegge/beads"
 	"github.com/steveyegge/gastown/internal/config"
 	"github.com/steveyegge/gastown/internal/scheduler/capacity"
 	"github.com/steveyegge/gastown/internal/testutil"
@@ -245,28 +243,6 @@ func addBeadDependencyOfType(t *testing.T, from, to, depType, dir string) {
 		return
 	}
 	t.Fatalf("bd dep add %s %s --type=%s failed: %v\n%s", from, to, depType, err, out)
-}
-
-// ensureCrossRigDep creates a cross-rig dependency via the beads Go SDK,
-// writing directly to the embedded store. Used when bd v1.0.0 can't create
-// cross-rig deps via the CLI (which validates target existence).
-func ensureCrossRigDep(t *testing.T, from, to, depType, dir string) {
-	t.Helper()
-	ctx := context.Background()
-	beadsDir := filepath.Join(dir, ".beads")
-	store, err := beadsdk.OpenFromConfig(ctx, beadsDir)
-	if err != nil {
-		t.Fatalf("ensureCrossRigDep: open store at %s: %v", beadsDir, err)
-	}
-	defer store.Close()
-	dep := &beadsdk.Dependency{
-		IssueID:     from,
-		DependsOnID: to,
-		Type:        beadsdk.DependencyType(depType),
-	}
-	if err := store.AddDependency(ctx, dep, "test"); err != nil {
-		t.Fatalf("ensureCrossRigDep: add dep %s→%s: %v", from, to, err)
-	}
 }
 
 // createTestBeadOfType creates a bead with the given title and issue type (e.g.,
