@@ -266,6 +266,30 @@ func addBeadDependencyOfType(t *testing.T, from, to, depType, dir string) {
 	t.Fatalf("bd dep add %s %s --type=%s failed: %v\n%s", from, to, depType, err, out)
 }
 
+// ensureCrossRigDep creates a cross-rig dependency via direct SQL on the Dolt
+// server. Used when bd v1.0.0 can't create cross-rig deps via CLI or store.
+func ensureCrossRigDep(t *testing.T, from, to, depType, dir string) {
+	t.Helper()
+	port := os.Getenv("GT_DOLT_PORT")
+	if port == "" {
+		port = "3307"
+	}
+	prefix := from[:strings.Index(from, "-")]
+	dbName := "beads_" + prefix
+	dsn := fmt.Sprintf("root@tcp(127.0.0.1:%s)/%s", port, dbName)
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		t.Fatalf("ensureCrossRigDep: connect to %s: %v", dbName, err)
+	}
+	defer db.Close()
+	_, err = db.Exec(
+		"INSERT IGNORE INTO dependencies (issue_id, depends_on_id, type, created_by) VALUES (?, ?, ?, 'test')",
+		from, to, depType)
+	if err != nil {
+		t.Fatalf("ensureCrossRigDep: insert dep %s→%s: %v", from, to, err)
+	}
+}
+
 // createTestBeadOfType creates a bead with the given title and issue type (e.g.,
 // "epic", "convoy", "task") and returns the auto-generated bead ID.
 func createTestBeadOfType(t *testing.T, dir, title, issueType string) string {
