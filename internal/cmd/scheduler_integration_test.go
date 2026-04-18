@@ -760,8 +760,9 @@ func TestSchedulerMultiRigEpicAutoResolve(t *testing.T) {
 	// Link children to epic via depends_on (epic → child).
 	// child1 is local to rig1 — resolves directly.
 	addBeadDependencyOfType(t, epicID, child1, "depends_on", rig1Path)
-	// child2 is in rig2 — resolved via routes.jsonl as an external ref.
-	addBeadDependencyOfType(t, epicID, child2, "depends_on", rig1Path)
+	// child2 is in rig2 — bd v1.0.0 can't resolve cross-rig IDs via CLI,
+	// so use the beads Go SDK to insert the dependency directly.
+	ensureCrossRigDep(t, epicID, child2, "depends_on", rig1Path)
 
 	// Dry-run: verify auto-rig-resolution routes each child correctly.
 	// Uses --dry-run to avoid needing formula infrastructure (mol-polecat-work).
@@ -865,7 +866,7 @@ func TestSchedulerEpicDetection(t *testing.T) {
 	child1 := createTestBead(t, rig1Path, "Rig1 child")
 	child2 := createTestBead(t, rig2Path, "Rig2 child")
 	addBeadDependencyOfType(t, epicID, child1, "depends_on", rig1Path)
-	addBeadDependencyOfType(t, epicID, child2, "depends_on", rig1Path)
+	ensureCrossRigDep(t, epicID, child2, "depends_on", rig1Path)
 
 	// gt sling <epic-id> deferred dispatch (max_polecats > 0) --dry-run should auto-detect epic and list children.
 	out := runGTCmdOutput(t, gtBinary, hqPath, env, "sling", epicID, "--dry-run")
@@ -915,9 +916,9 @@ func TestSchedulerMultiRigConvoyAutoResolve(t *testing.T) {
 	bead2 := createTestBead(t, rig2Path, "Rig2 tracked bead")
 
 	// Add tracks deps from convoy (HQ) to beads in each rig.
-	// bead1 and bead2 are in different DBs — stored as external refs in HQ.
-	addBeadDependencyOfType(t, convoyID, bead1, "tracks", hqPath)
-	addBeadDependencyOfType(t, convoyID, bead2, "tracks", hqPath)
+	// bead1 and bead2 are in different DBs — use SDK for cross-rig deps.
+	ensureCrossRigDep(t, convoyID, bead1, "tracks", hqPath)
+	ensureCrossRigDep(t, convoyID, bead2, "tracks", hqPath)
 
 	// Wait for bd's issues.jsonl timestamp to settle (same race as
 	// TestSchedulerDirectConvoyDispatch — 1-second granularity stale check).
@@ -1093,7 +1094,7 @@ func TestSchedulerDirectEpicDispatch(t *testing.T) {
 	child1 := createTestBead(t, rig1Path, "Rig1 direct child")
 	child2 := createTestBead(t, rig2Path, "Rig2 direct child")
 	addBeadDependencyOfType(t, epicID, child1, "depends_on", rig1Path)
-	addBeadDependencyOfType(t, epicID, child2, "depends_on", rig1Path)
+	ensureCrossRigDep(t, epicID, child2, "depends_on", rig1Path)
 
 	// gt sling <epic-id> --dry-run in direct mode should show direct dispatch, not scheduling
 	out := runGTCmdOutput(t, gtBinary, hqPath, env, "sling", epicID, "--dry-run")
@@ -1181,8 +1182,8 @@ func TestSchedulerDirectConvoyDispatch(t *testing.T) {
 	convoyID := createTestBeadOfType(t, hqPath, "Direct dispatch convoy", "convoy")
 	bead1 := createTestBead(t, rig1Path, "Rig1 direct tracked")
 	bead2 := createTestBead(t, rig2Path, "Rig2 direct tracked")
-	addBeadDependencyOfType(t, convoyID, bead1, "tracks", hqPath)
-	addBeadDependencyOfType(t, convoyID, bead2, "tracks", hqPath)
+	ensureCrossRigDep(t, convoyID, bead1, "tracks", hqPath)
+	ensureCrossRigDep(t, convoyID, bead2, "tracks", hqPath)
 
 	// Wait for bd's issues.jsonl timestamp to settle. bd checks that the Dolt
 	// import timestamp >= jsonl mtime (1-second granularity). Without this,
